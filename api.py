@@ -14,34 +14,42 @@ app.config['MONGO_DBNAME'] = "expenses"
 mongo = PyMongo(app)
 api = restful.Api(app)
 
-class ExpensesList(restful.Resource):
-    def get(self):
-
-        expenses = mongo.db.expenses.find()
-        exp_list = list()
-        for exp in expenses :
-            exp_list.append({ "value" : exp["value"], "date" : exp["_id"].generation_time, "_id" : str(exp["_id"])})
-        return jsonify(expenses = exp_list)
+      
 class Expense(restful.Resource):
 
-    def get(self, expense_id):
-        #ipdb.set_trace()
-        if not ObjectId.is_valid(expense_id):
-            return ("Bad Request", 400)
+    def get(self, expense_id=None):
+        if expense_id is None:
+             expenses = mongo.db.expenses.find()
+            exp_list = list()
+            for exp in expenses :
+                exp_list.append({ "value" : exp["value"], "date" : exp["_id"].generation_time, "_id" : str(exp["_id"])})
+            return jsonify(expenses = exp_list)
 
-        expenses = mongo.db.expenses.find({"_id" : ObjectId(expense_id)})
-        if expenses.count() != 1:
-            return ("Not Found", 404)
-        else: 
-            exp = expenses[0]
+        else :
+            if not ObjectId.is_valid(expense_id):
+                return ("Bad Request", 400)
 
-        return jsonify(value = exp["value"], _id=str(exp["_id"]), date=exp["_id"].generation_time)
+            expenses = mongo.db.expenses.find({"_id" : ObjectId(expense_id)})
+            if expenses.count() != 1:
+                return ("Not Found", 404)
+            else: 
+                exp = expenses[0]
+
+            return jsonify(value = exp["value"], _id=str(exp["_id"]), date=exp["_id"].generation_time)
     
     def post(self):
         ipdb.set_trace()
         if not 'value' in request.json or  type(request.json["value"]) not in [float, int, long]:
             return "Bad Request", 400
         expense_id = mongo.db.expenses.insert({"value": request.json["value"]})
+        
+        return "OK", 200
+
+    def delete(self, expense_id = None):
+        if expense_id is None:
+            return "Bad Request", 400
+
+        mongo.db.expenses.remove({"_id": ObjectId(expense_id)})
         
         return "OK", 200
 
